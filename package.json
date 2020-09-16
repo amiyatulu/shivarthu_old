@@ -6,15 +6,25 @@
     "@testing-library/jest-dom": "^4.2.4",
     "@testing-library/react": "^9.3.2",
     "@testing-library/user-event": "^7.1.2",
+    "axios": "^0.20.0",
+    "formik": "^2.1.5",
+    "near-api-js": "^0.29.1",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
-    "react-scripts": "3.4.3"
+    "react-router-dom": "^5.2.0",
+    "react-router-hash-link": "^2.1.0",
+    "react-scripts": "3.4.3",
+    "yup": "^0.29.3"
   },
   "scripts": {
+    "build:contract": "node ./contract/build",
+    "dev:deploy:contract": "near dev-deploy --wasmFile ./contract/res/status_message.wasm",
+    "prestart": "npm run build:contract && npm run dev:deploy:contract",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "ctest": "cd contract && cargo test --package status-message -- --nocapture"
   },
   "eslintConfig": {
     "extends": "react-app"
@@ -30,5 +40,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "shelljs": "^0.8.4"
   }
 }

@@ -1,0 +1,30 @@
+[package]
+name = "approval-voting"
+version = "0.1.0"
+authors = ["Amiya Behera <amiyatulu@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk = "2.0.0"
+wee_alloc = "0.4.5"
+chrono = "0.4.13"
+sha3 = "0.9.1"
+hex = "0.4.2"
+
+
+[profile.release]
+codegen-units = 1
+# Tell `rustc` to optimize for small code size.
+opt-level = "z"
+lto = true
+debug = false
+panic = "abort"
+
+[workspace]
+members = []
