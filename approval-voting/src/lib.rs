@@ -7,10 +7,11 @@
 // To conserve gas, efficient serialization is achieved through Borsh (http://borsh.io/)
 use chrono::{Duration, NaiveDateTime};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LookupMap, Vector};
+use near_sdk::collections::{TreeMap, Vector};
 use near_sdk::wee_alloc;
 use near_sdk::{env, near_bindgen};
 use sha3::{Digest, Keccak256};
+
 
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
@@ -19,12 +20,12 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct CommitRevealElection {
     candidate_id: u128,
-    candidate_map: LookupMap<u128, String>, // candidateId, candidateName
-    candidate_votes: LookupMap<u128, u128>, //candiateId, candidateVotes
+    candidate_map: TreeMap<u128, String>, // candidateId, candidateName
+    candidate_votes: TreeMap<u128, u128>, //candiateId, candidateVotes
     commit_phase_end_time: String,
     number_of_votes_cast: u128,
     vote_commits: Vector<String>,
-    vote_statuses: LookupMap<String, bool>,
+    vote_statuses: TreeMap<String, bool>,
 }
 
 impl Default for CommitRevealElection {
@@ -51,12 +52,12 @@ impl CommitRevealElection {
 
         let commitreveal = Self {
             candidate_id: 0,
-            candidate_map: LookupMap::new(b"4008c2a0-370c-4749-82ba-cc9a013c9416".to_vec()),
-            candidate_votes: LookupMap::new(b"05943884-211d-4063-91c1-b802c2352fa4".to_vec()),
+            candidate_map: TreeMap::new(b"4008c2a0-370c-4749-82ba-cc9a013c9416".to_vec()),
+            candidate_votes: TreeMap::new(b"05943884-211d-4063-91c1-b802c2352fa4".to_vec()),
             commit_phase_end_time: endtime.to_string(),
             number_of_votes_cast: 0,
             vote_commits: Vector::new(b"a2e2c5d2-26e8-4eda-8b64-63786b9a1cad".to_vec()),
-            vote_statuses: LookupMap::new(b"76234189-ba21-49d8-a77f-2c5f728891e0".to_vec()),
+            vote_statuses: TreeMap::new(b"76234189-ba21-49d8-a77f-2c5f728891e0".to_vec()),
         };
         commitreveal
     }
@@ -150,6 +151,17 @@ impl CommitRevealElection {
 
         self.vote_statuses.insert(&vote_commit, &false);
     }
+
+    pub fn n_winner(&self, n: usize) {
+        
+        let mut data = self.candidate_votes.to_vec();
+        data.sort_by(|a, b| b.1.cmp(&a.1));
+        println!("{:?}", data);
+        for index in 0..n {
+            println!("{} winners {:?}", index, data[index]);
+        }
+        
+    }
 }
 
 /*
@@ -205,7 +217,9 @@ mod tests {
         testing_env!(context.clone());
         let mut contract = CommitRevealElection::new(20);
         let breaktime = time::Duration::from_secs(10);
-        contract.add_candidate("Paul".to_owned());
+        for number in 1..=5 {
+            contract.add_candidate(format!("Paul{}", number).to_owned());
+        }
         thread::sleep(breaktime);
         // Vote commit 1
         let vote = "1password".to_owned();
@@ -227,6 +241,36 @@ mod tests {
         println!("{} commit in test", commit);
         contract.commit_vote(commit2.clone());
 
+        for number in 2..=5 {
+            let vote = format!("{}mypass1", number).to_owned();
+            let mut hasher = Keccak256::new();
+            hasher.update(vote.as_bytes());
+            let result = hasher.finalize();
+            let commit = format!("{:x}", result);
+            println!("{} commit in test", commit);
+            contract.commit_vote(commit.clone());
+        }
+
+        for number in 3..=5 {
+            let vote = format!("{}mypass2", number).to_owned();
+            let mut hasher = Keccak256::new();
+            hasher.update(vote.as_bytes());
+            let result = hasher.finalize();
+            let commit = format!("{:x}", result);
+            println!("{} commit in test", commit);
+            contract.commit_vote(commit.clone());
+        }
+
+        for number in 4..=5 {
+            let vote = format!("{}mypass3", number).to_owned();
+            let mut hasher = Keccak256::new();
+            hasher.update(vote.as_bytes());
+            let result = hasher.finalize();
+            let commit = format!("{:x}", result);
+            println!("{} commit in test", commit);
+            contract.commit_vote(commit.clone());
+        }
+
         let breaktime2 = time::Duration::from_secs(15);
         thread::sleep(breaktime2);
         context.block_timestamp = get_timstamp();
@@ -236,5 +280,35 @@ mod tests {
         // Vote reveal 2
         contract.reveal_vote("1mypass".to_owned(), commit2.clone());
 
+        // Vote reveal loop
+
+        for number in 2..=5 {
+            let vote = format!("{}mypass1", number).to_owned();
+            let mut hasher = Keccak256::new();
+            hasher.update(vote.as_bytes());
+            let result = hasher.finalize();
+            let commit = format!("{:x}", result);
+            contract.reveal_vote(vote, commit.clone());
+        }
+        for number in 3..=5 {
+            let vote = format!("{}mypass2", number).to_owned();
+            let mut hasher = Keccak256::new();
+            hasher.update(vote.as_bytes());
+            let result = hasher.finalize();
+            let commit = format!("{:x}", result);
+            contract.reveal_vote(vote, commit.clone());
+        }
+
+        for number in 4..=5 {
+            let vote = format!("{}mypass3", number).to_owned();
+            let mut hasher = Keccak256::new();
+            hasher.update(vote.as_bytes());
+            let result = hasher.finalize();
+            let commit = format!("{:x}", result);
+            contract.reveal_vote(vote, commit.clone());
+        }
+
+        //Winners
+        contract.n_winner(3);
     }
 }
