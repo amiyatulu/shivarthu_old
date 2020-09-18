@@ -12,7 +12,6 @@ use near_sdk::wee_alloc;
 use near_sdk::{env, near_bindgen};
 use sha3::{Digest, Keccak256};
 
-
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
@@ -153,14 +152,10 @@ impl CommitRevealElection {
     }
 
     pub fn n_winner(&self, n: usize) {
-        
         let mut data = self.candidate_votes.to_vec();
         data.sort_by(|a, b| b.1.cmp(&a.1));
-        println!("{:?}", data);
-        for index in 0..n {
-            println!("{} winners {:?}", index, data[index]);
-        }
-        
+        println!("Sorted data {:?}", data);
+        println!("Winners {:?}", &data[0..n]);
     }
 }
 
