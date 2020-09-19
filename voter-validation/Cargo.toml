@@ -1,0 +1,11 @@
+[package]
+name = "voter-validation"
+version = "0.1.0"
+authors = ["Amiya Behera <amiyatulu@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+near-sdk = "2.0.0"
+wee_alloc = "0.4.5"
