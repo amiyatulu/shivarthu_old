@@ -6,6 +6,10 @@ https://shivarthu.reaudito.com/#/
 Whitepaper
 https://shivarthu.reaudito.com/paper/Shivarthu_whitepaper.pdf
 
+Decentralized Democracy UI
+https://gateway.ipfs.io/ipfs/QmUTMU4ndH6TpjYZkuES78wDNbMKLr1d2eSjE6SMh4nmwJ/
+
+
 
 
 Build with near protocol blockchain, ipfs and react

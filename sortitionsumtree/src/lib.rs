@@ -310,20 +310,20 @@ mod tests {
         contract.set("Python".to_owned(), 20, "Code4".to_owned());
 
         let draw_value = contract.draw("Python".to_owned(), 13);
-        println!("{:?}", draw_value);
+        println!("draw value {:?}", draw_value);
         let draw_value = contract.draw("Python".to_owned(), 27);
-        println!("{:?}", draw_value);
+        println!("draw value {:?}", draw_value);
 
         let draw_value = contract.draw("Python".to_owned(), 3);
-        println!("{:?}", draw_value);
+        println!("draw value {:?}", draw_value);
         let draw_value = contract.draw("Python".to_owned(), 19);
-        println!("{:?}", draw_value);
+        println!("draw value {:?}", draw_value);
         let draw_value = contract.draw("Python".to_owned(), 49);
-        println!("{:?}", draw_value);
+        println!("draw value {:?}", draw_value);
         let draw_value = contract.draw("Python".to_owned(), 0);
-        println!("{:?}", draw_value);
+        println!("draw value {:?}", draw_value);
         let value = contract.stake_of("Python".to_owned(), "Code4".to_owned());
-        println!("{:?}", value);
+        println!("draw value {:?}", value);
 
         contract.create_tree("Python2".to_owned(), 2);
         contract.set("Python2".to_owned(), 15, "Code1".to_owned());
