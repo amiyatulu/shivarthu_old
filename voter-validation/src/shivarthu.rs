@@ -1,5 +1,5 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{UnorderedMap, LookupMap};
+use near_sdk::collections::{LookupMap, UnorderedMap};
 use near_sdk::json_types::U128;
 use near_sdk::{env, near_bindgen, wee_alloc, AccountId, Balance, Promise, StorageUsage};
 
@@ -12,7 +12,7 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 pub const STORAGE_PRICE_PER_BYTE: Balance = 100000000000000000000;
 
 /// Contains balance and allowances information for one account.
-/// 
+///
 
 // **** Steps for voter validation ****
 // 1) Voters apply their resume
@@ -39,17 +39,16 @@ pub struct FungibleToken {
     pub total_supply: Balance,
 
     // Voter validation
-
     pub voter_id: u128,
-    pub voter_map: LookupMap<String, u128>,
-    pub voter_profile_map: LookupMap<u128, Voter>,
+    pub voter_map: LookupMap<String, u128>, // <Account_name, voter_id>
+    pub voter_profile_map: LookupMap<u128, Voter>, // <voter_id, Voter>
+    pub voter_if_staked: LookupMap<u128, bool>, // <voter_id, true or false>
+    pub voter_stakes: LookupMap<u128, u128>, // <voter_id, stakes>
 }
-
 
 /// Voter Validation impl
 #[near_bindgen]
 impl FungibleToken {
-
     pub fn create_voter_profile(&mut self, profile_hash: String) {
         let account_id = env::signer_account_id();
         let account_id_exists_option = self.voter_map.get(&account_id);
@@ -58,9 +57,7 @@ impl FungibleToken {
             kyc_done: false,
         };
         match account_id_exists_option {
-            Some(_voter_id) => {
-                panic!("Voter profile already exists")
-            }
+            Some(_voter_id) => panic!("Voter profile already exists"),
             None => {
                 self.voter_id += 1;
                 self.voter_map.insert(&account_id, &self.voter_id);
@@ -68,14 +65,31 @@ impl FungibleToken {
             }
         }
     }
-
-
-
 }
 
 impl Default for FungibleToken {
     fn default() -> Self {
         panic!("Fun token should be initialized before usage")
+    }
+}
+
+/// Need to test for overflow and underflow
+#[near_bindgen]
+impl FungibleToken {
+    fn _mint(&mut self, owner_id: &AccountId, amount: u128) {
+        if !owner_id.is_empty() {
+            self.total_supply = self.total_supply + amount;
+            let mut account = self.get_account(&owner_id);
+            account.balance += amount;
+        }
+    }
+
+    fn _burn(&mut self, owner_id: &AccountId, amount: u128) {
+        if !owner_id.is_empty() {
+            self.total_supply = self.total_supply - amount;
+            let mut account = self.get_account(&owner_id);
+            account.balance -= amount;
+        }
     }
 }
 
@@ -92,6 +106,8 @@ impl FungibleToken {
             voter_id: 0,
             voter_map: LookupMap::new(b"2a543bc7-a03f-427f-98c4-aa34012fa358".to_vec()),
             voter_profile_map: LookupMap::new(b"a9d08e6d-fe16-441e-9330-81f45b8a68b3".to_vec()),
+            voter_if_staked: LookupMap::new(b"0e9cdb00-e90a-4aed-8541-1fb2ea6a1538".to_vec()),
+            voter_stakes: LookupMap::new(b"de89b05f-e35d-4237-bba9-64b2baac1ca8".to_vec()),
         };
         let mut account = ft.get_account(&owner_id);
         account.balance = total_supply;
