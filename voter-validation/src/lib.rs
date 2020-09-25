@@ -2,11 +2,11 @@ pub mod shivarthu;
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 mod tests {
+    use crate::shivarthu::{FungibleToken,STORAGE_PRICE_PER_BYTE};
     use near_sdk::MockedBlockchain;
-    use near_sdk::{testing_env, VMContext};
     use near_sdk::{env, AccountId, Balance};
-    use crate::shivarthu::FungibleToken;
-    use crate::shivarthu::STORAGE_PRICE_PER_BYTE;
+    use near_sdk::{testing_env, VMContext};
+    
 
     fn alice() -> AccountId {
         "alice.near".to_string()
@@ -304,5 +304,23 @@ mod tests {
             initial_balance
                 - Balance::from(initial_storage - context.storage_usage) * STORAGE_PRICE_PER_BYTE
         );
+    }
+
+    #[test]
+    fn test_voter_addition() {
+        let mut context = get_context(carol());
+        testing_env!(context.clone());
+        let total_supply = 1_000_000_000_000_000u128;
+        let mut contract = FungibleToken::new(carol(), total_supply.into());
+        context.storage_usage = env::storage_usage();
+        contract.create_voter_profile("c1d1a89574c6e744d982e0f2bf1154ef05c13".to_owned());
+        let voter_id_option = contract
+            .voter_map
+            .get(&bob());
+        let voter_id = voter_id_option.unwrap();
+        assert_eq!(voter_id, 1);
+        let voter_profile_option = contract.voter_profile_map.get(&1);
+        let voter = voter_profile_option.unwrap();
+        assert_eq!( "c1d1a89574c6e744d982e0f2bf1154ef05c13".to_owned(), voter.profile_hash);
     }
 }

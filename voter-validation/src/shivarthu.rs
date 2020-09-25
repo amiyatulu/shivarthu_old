@@ -1,5 +1,5 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::UnorderedMap;
+use near_sdk::collections::{UnorderedMap, LookupMap};
 use near_sdk::json_types::U128;
 use near_sdk::{env, near_bindgen, wee_alloc, AccountId, Balance, Promise, StorageUsage};
 
@@ -12,7 +12,22 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 pub const STORAGE_PRICE_PER_BYTE: Balance = 100000000000000000000;
 
 /// Contains balance and allowances information for one account.
+/// 
 
+// **** Steps for voter validation ****
+// 1) Voters apply their resume
+// 2) Voters stake some amount of token, (if > 2 tokens will get 1 tokens, if less than 2 token, will get 50% of the token), will be quadratic in future https://bioinsilico.blogspot.com/2020/08/perfect-price-discovery-and-blockchain.html
+// 3) Apply jurors using staking using the id of voter application, also set the time till jurors can apply.
+// 4) Draw jurors, 50% of jouror can vote, can't be less than 10
+// 5) Juror Vote, set the time for voting through commit
+// 6) Reveal Juror vote
+// 7) Juror will get the incentives or disinstives 5tokens/total jurors
+
+#[derive(Debug, Default, BorshDeserialize, BorshSerialize)]
+pub struct Voter {
+    pub profile_hash: String, //IPFS Hash
+    pub kyc_done: bool,
+}
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize)]
@@ -22,6 +37,40 @@ pub struct FungibleToken {
 
     /// Total supply of the all token.
     pub total_supply: Balance,
+
+    // Voter validation
+
+    pub voter_id: u128,
+    pub voter_map: LookupMap<String, u128>,
+    pub voter_profile_map: LookupMap<u128, Voter>,
+}
+
+
+/// Voter Validation impl
+#[near_bindgen]
+impl FungibleToken {
+
+    pub fn create_voter_profile(&mut self, profile_hash: String) {
+        let account_id = env::signer_account_id();
+        let account_id_exists_option = self.voter_map.get(&account_id);
+        let u = Voter {
+            profile_hash,
+            kyc_done: false,
+        };
+        match account_id_exists_option {
+            Some(_voter_id) => {
+                panic!("Voter profile already exists")
+            }
+            None => {
+                self.voter_id += 1;
+                self.voter_map.insert(&account_id, &self.voter_id);
+                self.voter_profile_map.insert(&self.voter_id, &u);
+            }
+        }
+    }
+
+
+
 }
 
 impl Default for FungibleToken {
@@ -40,6 +89,9 @@ impl FungibleToken {
         let mut ft = Self {
             accounts: UnorderedMap::new(b"a".to_vec()),
             total_supply,
+            voter_id: 0,
+            voter_map: LookupMap::new(b"2a543bc7-a03f-427f-98c4-aa34012fa358".to_vec()),
+            voter_profile_map: LookupMap::new(b"a9d08e6d-fe16-441e-9330-81f45b8a68b3".to_vec()),
         };
         let mut account = ft.get_account(&owner_id);
         account.balance = total_supply;
