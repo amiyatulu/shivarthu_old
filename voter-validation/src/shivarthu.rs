@@ -33,22 +33,34 @@ pub struct Voter {
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct FungibleToken {
     /// sha256(AccountID) -> Account details.
-    pub accounts: UnorderedMap<Vec<u8>, Account>,
+    accounts: UnorderedMap<Vec<u8>, Account>,
 
     /// Total supply of the all token.
-    pub total_supply: Balance,
+    total_supply: Balance,
 
     // Voter validation
-    pub voter_id: u128,
-    pub voter_map: LookupMap<String, u128>, // <Account_name, voter_id>
-    pub voter_profile_map: LookupMap<u128, Voter>, // <voter_id, Voter>
-    pub voter_if_staked: LookupMap<u128, bool>, // <voter_id, true or false>
-    pub voter_stakes: LookupMap<u128, u128>, // <voter_id, stakes>
+    voter_id: u128,
+    voter_map: LookupMap<String, u128>, // <Account_name, voter_id>
+    voter_profile_map: LookupMap<u128, Voter>, // <voter_id, Voter>
+    voter_if_staked: LookupMap<u128, bool>, // <voter_id, true or false>
+    voter_stakes: LookupMap<u128, u128>, // <voter_id, stakes>
 }
 
 /// Voter Validation impl
 #[near_bindgen]
 impl FungibleToken {
+    pub fn get_voter_id(&self, account_id: AccountId) -> u128 {
+        let voter_id_option = self.voter_map.get(&account_id);
+        let voter_id = voter_id_option.unwrap();
+        voter_id
+    }
+
+    pub fn get_voter_details(&self, voter_id: u128) -> Voter {
+        let voter_profile_option = self.voter_profile_map.get(&voter_id);
+        let voter = voter_profile_option.unwrap();
+        voter
+    }
+
     pub fn create_voter_profile(&mut self, profile_hash: String) {
         let account_id = env::signer_account_id();
         let account_id_exists_option = self.voter_map.get(&account_id);
@@ -65,6 +77,33 @@ impl FungibleToken {
             }
         }
     }
+
+    pub fn create_voter_stake(&mut self, stake: u128) {
+        let account_id = env::signer_account_id();
+        let account_id_exists_option = self.voter_map.get(&account_id);
+        match account_id_exists_option {
+            Some(voter_id) => {
+                let if_staked_bool_option = self.voter_if_staked.get(&voter_id);
+                match if_staked_bool_option {
+                    Some(if_staked_bool) => {
+                        if !if_staked_bool {
+                            self.burn(&account_id, stake);
+                            self.voter_if_staked.insert(&voter_id, &true);
+                            println!("I am in voter_if_staked false ");
+                        }
+                    }
+                    None => {
+                        self.burn(&account_id, stake);
+                        self.voter_if_staked.insert(&voter_id, &true);
+                        println!("I am in voter_if_staked None");
+                    }
+                }
+            }
+            None => {
+                panic!("Voter id doesnot exist");
+            }
+        }
+    }
 }
 
 impl Default for FungibleToken {
@@ -73,22 +112,44 @@ impl Default for FungibleToken {
     }
 }
 
-/// Need to test for overflow and underflow
+/// Burn and mint
 #[near_bindgen]
 impl FungibleToken {
     fn _mint(&mut self, owner_id: &AccountId, amount: u128) {
         if !owner_id.is_empty() {
+            let initial_storage = env::storage_usage();
+            if amount == 0 {
+                env::panic(b"Can't transfer 0 tokens");
+            }
+            assert!(
+                env::is_valid_account_id(owner_id.as_bytes()),
+                "New owner's account ID is invalid"
+            );
             self.total_supply = self.total_supply + amount;
             let mut account = self.get_account(&owner_id);
             account.balance += amount;
+            self.set_account(&owner_id, &account);
+            self.refund_storage(initial_storage);
         }
     }
 
-    fn _burn(&mut self, owner_id: &AccountId, amount: u128) {
+    fn burn(&mut self, owner_id: &AccountId, amount: u128) {
         if !owner_id.is_empty() {
+            let initial_storage = env::storage_usage();
+            if amount == 0 {
+                env::panic(b"Can't transfer 0 tokens");
+            }
+            assert!(
+                env::is_valid_account_id(owner_id.as_bytes()),
+                "Owner's account ID is invalid"
+            );
+         
             self.total_supply = self.total_supply - amount;
             let mut account = self.get_account(&owner_id);
+
             account.balance -= amount;
+            self.set_account(&owner_id, &account);
+            self.refund_storage(initial_storage);
         }
     }
 }

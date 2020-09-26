@@ -2,11 +2,10 @@ pub mod shivarthu;
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(test)]
 mod tests {
-    use crate::shivarthu::{FungibleToken,STORAGE_PRICE_PER_BYTE};
+    use crate::shivarthu::{FungibleToken, STORAGE_PRICE_PER_BYTE};
     use near_sdk::MockedBlockchain;
     use near_sdk::{env, AccountId, Balance};
     use near_sdk::{testing_env, VMContext};
-    
 
     fn alice() -> AccountId {
         "alice.near".to_string()
@@ -20,17 +19,17 @@ mod tests {
 
     fn get_context(predecessor_account_id: AccountId) -> VMContext {
         VMContext {
-            current_account_id: alice(),
-            signer_account_id: bob(),
+            current_account_id: alice(), //The id of the account that owns the current contract.
+            signer_account_id: bob(), // The id of the account that either signed the original transaction or issued the initial cross-contract call
             signer_account_pk: vec![0, 1, 2],
-            predecessor_account_id,
+            predecessor_account_id, //The id of the account that was the previous contract in the chain of cross-contract calls. If this is the first contract, it is equal to signer_account_id
             input: vec![],
             block_index: 0,
             block_timestamp: 0,
             account_balance: 1_000_000_000_000_000_000_000_000_000u128,
             account_locked_balance: 0,
             storage_usage: 10u64.pow(6),
-            attached_deposit: 0,
+            attached_deposit: 0, //The balance that was attached to the call that will be immediately deposited before the contract execution starts
             prepaid_gas: 10u64.pow(18),
             random_seed: vec![0, 1, 2],
             is_view: false,
@@ -314,13 +313,56 @@ mod tests {
         let mut contract = FungibleToken::new(carol(), total_supply.into());
         context.storage_usage = env::storage_usage();
         contract.create_voter_profile("c1d1a89574c6e744d982e0f2bf1154ef05c13".to_owned());
-        let voter_id_option = contract
-            .voter_map
-            .get(&bob());
-        let voter_id = voter_id_option.unwrap();
+        let voter_id = contract.get_voter_id(bob());
         assert_eq!(voter_id, 1);
-        let voter_profile_option = contract.voter_profile_map.get(&1);
-        let voter = voter_profile_option.unwrap();
-        assert_eq!( "c1d1a89574c6e744d982e0f2bf1154ef05c13".to_owned(), voter.profile_hash);
+        let voter = contract.get_voter_details(1);
+        assert_eq!(
+            "c1d1a89574c6e744d982e0f2bf1154ef05c13".to_owned(),
+            voter.profile_hash
+        );
+    }
+
+    #[test]
+    fn test_voter_stake() {
+        let mut context = get_context(carol());
+        testing_env!(context.clone());
+        let total_supply = 1_000_000_000_000_000u128;
+        let mut contract = FungibleToken::new(carol(), total_supply.into());
+        context.storage_usage = env::storage_usage();
+        contract.create_voter_profile("c1d1a89574c6e744d982e0f2bf1154ef05c13".to_owned());
+        let voter_id = contract.get_voter_id(bob());
+        assert_eq!(voter_id, 1);
+        let voter = contract.get_voter_details(1);
+        assert_eq!(
+            "c1d1a89574c6e744d982e0f2bf1154ef05c13".to_owned(),
+            voter.profile_hash
+        );
+        context.storage_usage = env::storage_usage();
+
+        context.attached_deposit = 1000 * STORAGE_PRICE_PER_BYTE;
+        testing_env!(context.clone());
+        let transfer_amount = total_supply / 3;
+        contract.transfer(bob(), transfer_amount.into());
+        context.storage_usage = env::storage_usage();
+        context.account_balance = env::account_balance();
+
+        context.is_view = true;
+        context.attached_deposit = 0;
+        testing_env!(context.clone());
+        assert_eq!(
+            contract.get_balance(carol()).0,
+            (total_supply - transfer_amount)
+        );
+        assert_eq!(contract.get_balance(bob()).0, transfer_amount);
+        context.is_view = false;
+        testing_env!(context.clone());
+        // println!("{}", contract.get_balance(bob()).0);
+        let intialtotalsupply = contract.get_total_supply().0;
+        contract.create_voter_stake(50);
+        // println!("{}", contract.get_balance(bob()).0);
+        assert_eq!(contract.get_balance(bob()).0, transfer_amount - 50);
+        // let totalsupply = contract.get_total_supply();
+        // println!("{}", totalsupply.0);
+        assert_eq!(contract.get_total_supply().0, intialtotalsupply - 50);
     }
 }
