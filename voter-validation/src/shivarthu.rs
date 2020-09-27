@@ -44,6 +44,7 @@ pub struct FungibleToken {
     voter_profile_map: LookupMap<u128, Voter>, // <voter_id, Voter>
     voter_if_staked: LookupMap<u128, bool>, // <voter_id, true or false>
     voter_stakes: LookupMap<u128, u128>, // <voter_id, stakes>
+    
 }
 
 /// Voter Validation impl
@@ -59,6 +60,12 @@ impl FungibleToken {
         let voter_profile_option = self.voter_profile_map.get(&voter_id);
         let voter = voter_profile_option.unwrap();
         voter
+    }
+
+    pub fn get_voter_stake(&self, voter_id: u128) -> u128 {
+        let voter_stake_option = self.voter_stakes.get(&voter_id);
+        let voter_stake = voter_stake_option.unwrap();
+        voter_stake
     }
 
     pub fn create_voter_profile(&mut self, profile_hash: String) {
@@ -84,17 +91,20 @@ impl FungibleToken {
         match account_id_exists_option {
             Some(voter_id) => {
                 let if_staked_bool_option = self.voter_if_staked.get(&voter_id);
+                // Memo: Test setting voter_if_staked to false
                 match if_staked_bool_option {
                     Some(if_staked_bool) => {
                         if !if_staked_bool {
                             self.burn(&account_id, stake);
                             self.voter_if_staked.insert(&voter_id, &true);
+                            self.voter_stakes.insert(&voter_id, &stake);
                             println!("I am in voter_if_staked false ");
                         }
                     }
                     None => {
                         self.burn(&account_id, stake);
                         self.voter_if_staked.insert(&voter_id, &true);
+                        self.voter_stakes.insert(&voter_id, &stake);
                         println!("I am in voter_if_staked None");
                     }
                 }
@@ -125,10 +135,10 @@ impl FungibleToken {
                 env::is_valid_account_id(owner_id.as_bytes()),
                 "New owner's account ID is invalid"
             );
-            self.total_supply = self.total_supply + amount;
             let mut account = self.get_account(&owner_id);
             account.balance += amount;
             self.set_account(&owner_id, &account);
+            self.total_supply = self.total_supply + amount;
             self.refund_storage(initial_storage);
         }
     }
@@ -143,12 +153,11 @@ impl FungibleToken {
                 env::is_valid_account_id(owner_id.as_bytes()),
                 "Owner's account ID is invalid"
             );
-         
-            self.total_supply = self.total_supply - amount;
             let mut account = self.get_account(&owner_id);
 
             account.balance -= amount;
             self.set_account(&owner_id, &account);
+            self.total_supply = self.total_supply - amount;
             self.refund_storage(initial_storage);
         }
     }

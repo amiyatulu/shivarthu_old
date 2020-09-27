@@ -364,5 +364,8 @@ mod tests {
         // let totalsupply = contract.get_total_supply();
         // println!("{}", totalsupply.0);
         assert_eq!(contract.get_total_supply().0, intialtotalsupply - 50);
+        let stake = contract.get_voter_stake(voter_id);
+        // println!(">>>>>{}<<<<<<<", stake);
+        assert_eq!(stake, 50);
     }
 }
