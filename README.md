@@ -10,6 +10,10 @@ Decentralized Democracy UI
 https://gateway.ipfs.io/ipfs/QmUTMU4ndH6TpjYZkuES78wDNbMKLr1d2eSjE6SMh4nmwJ/
 
 
+Video:  
+[![Shivarthu](https://img.youtube.com/vi/JhTgKYNNUjY/0.jpg)](https://www.youtube.com/watch?v=JhTgKYNNUjY "Shivarthu")
+
+
 
 
 Build with near protocol blockchain, ipfs and react
