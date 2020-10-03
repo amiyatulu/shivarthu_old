@@ -313,7 +313,7 @@ mod tests {
         let mut contract = FungibleToken::new(carol(), total_supply.into());
         context.storage_usage = env::storage_usage();
         contract.create_voter_profile("c1d1a89574c6e744d982e0f2bf1154ef05c13".to_owned());
-        let voter_id = contract.get_voter_id(bob());
+        let voter_id = contract.get_user_id(bob());
         assert_eq!(voter_id, 1);
         let voter = contract.get_voter_details(1);
         assert_eq!(
@@ -330,7 +330,7 @@ mod tests {
         let mut contract = FungibleToken::new(carol(), total_supply.into());
         context.storage_usage = env::storage_usage();
         contract.create_voter_profile("c1d1a89574c6e744d982e0f2bf1154ef05c13".to_owned());
-        let voter_id = contract.get_voter_id(bob());
+        let voter_id = contract.get_user_id(bob());
         assert_eq!(voter_id, 1);
         let voter = contract.get_voter_details(1);
         assert_eq!(

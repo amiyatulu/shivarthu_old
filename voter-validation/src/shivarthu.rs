@@ -1,5 +1,5 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LookupMap, UnorderedMap};
+use near_sdk::collections::{LookupMap, LookupSet, UnorderedMap, Vector};
 use near_sdk::json_types::U128;
 use near_sdk::{env, near_bindgen, wee_alloc, AccountId, Balance, Promise, StorageUsage};
 
@@ -39,72 +39,74 @@ pub struct FungibleToken {
     total_supply: Balance,
 
     // Voter validation
-    voter_id: u128,
-    voter_map: LookupMap<String, u128>, // <Account_name, voter_id>
-    voter_profile_map: LookupMap<u128, Voter>, // <voter_id, Voter>
-    voter_if_staked: LookupMap<u128, bool>, // <voter_id, true or false>
-    voter_stakes: LookupMap<u128, u128>, // <voter_id, stakes>
-    
+    user_id: u128,
+    user_map: LookupMap<String, u128>, // <Account_name, user_id>
+    voter_profile_map: LookupMap<u128, Voter>, // <user_id, Voter>
+    voter_if_staked: LookupMap<u128, bool>, // <user_id, true or false>
+    voter_stakes: LookupMap<u128, u128>, // <user_id, stakes>
+    juror_stakes: LookupMap<u128, Vector<LookupMap<u128, u128>>>, //<juror user_id, <voter userid, stakes>>
+    // juror_if_staked: LookupMap<u128, Vector<LookupMap<u128, u128>>>, // <juror user_id, <voter_user_id, true or false>>
+    juror_applied_for: LookupMap<u128, LookupSet<u128>>, //<juror user_id, voter user id set>    
 }
 
 /// Voter Validation impl
 #[near_bindgen]
 impl FungibleToken {
-    pub fn get_voter_id(&self, account_id: AccountId) -> u128 {
-        let voter_id_option = self.voter_map.get(&account_id);
-        let voter_id = voter_id_option.unwrap();
-        voter_id
+    pub fn get_user_id(&self, account_id: AccountId) -> u128 {
+        let user_id_option = self.user_map.get(&account_id);
+        let user_id = user_id_option.unwrap();
+        user_id
     }
 
-    pub fn get_voter_details(&self, voter_id: u128) -> Voter {
-        let voter_profile_option = self.voter_profile_map.get(&voter_id);
+    pub fn get_voter_details(&self, user_id: u128) -> Voter {
+        let voter_profile_option = self.voter_profile_map.get(&user_id);
         let voter = voter_profile_option.unwrap();
         voter
     }
 
-    pub fn get_voter_stake(&self, voter_id: u128) -> u128 {
-        let voter_stake_option = self.voter_stakes.get(&voter_id);
+    pub fn get_voter_stake(&self, user_id: u128) -> u128 {
+        let voter_stake_option = self.voter_stakes.get(&user_id);
         let voter_stake = voter_stake_option.unwrap();
         voter_stake
     }
 
     pub fn create_voter_profile(&mut self, profile_hash: String) {
         let account_id = env::signer_account_id();
-        let account_id_exists_option = self.voter_map.get(&account_id);
+        let account_id_exists_option = self.user_map.get(&account_id);
         let u = Voter {
             profile_hash,
             kyc_done: false,
         };
         match account_id_exists_option {
-            Some(_voter_id) => panic!("Voter profile already exists"),
+            Some(_user_id) => panic!("Voter profile already exists"),
             None => {
-                self.voter_id += 1;
-                self.voter_map.insert(&account_id, &self.voter_id);
-                self.voter_profile_map.insert(&self.voter_id, &u);
+                self.user_id += 1;
+                self.user_map.insert(&account_id, &self.user_id);
+                self.voter_profile_map.insert(&self.user_id, &u);
             }
         }
     }
 
     pub fn create_voter_stake(&mut self, stake: u128) {
         let account_id = env::signer_account_id();
-        let account_id_exists_option = self.voter_map.get(&account_id);
+        let account_id_exists_option = self.user_map.get(&account_id);
         match account_id_exists_option {
-            Some(voter_id) => {
-                let if_staked_bool_option = self.voter_if_staked.get(&voter_id);
+            Some(user_id) => {
+                let if_staked_bool_option = self.voter_if_staked.get(&user_id);
                 // Memo: Test setting voter_if_staked to false
                 match if_staked_bool_option {
                     Some(if_staked_bool) => {
                         if !if_staked_bool {
                             self.burn(&account_id, stake);
-                            self.voter_if_staked.insert(&voter_id, &true);
-                            self.voter_stakes.insert(&voter_id, &stake);
+                            self.voter_if_staked.insert(&user_id, &true);
+                            self.voter_stakes.insert(&user_id, &stake);
                             println!("I am in voter_if_staked false ");
                         }
                     }
                     None => {
                         self.burn(&account_id, stake);
-                        self.voter_if_staked.insert(&voter_id, &true);
-                        self.voter_stakes.insert(&voter_id, &stake);
+                        self.voter_if_staked.insert(&user_id, &true);
+                        self.voter_stakes.insert(&user_id, &stake);
                         println!("I am in voter_if_staked None");
                     }
                 }
@@ -114,6 +116,16 @@ impl FungibleToken {
             }
         }
     }
+
+    // /// Apply Jurors with stake
+    
+    // pub fn apply_jurors(&mut self, user_id:u128, stake:u128) {
+    //     let account_id = env::signer_account_id();
+    //     let account_id_exists_option = self.user_map.get(&account_id);
+    //     match account_id_exists_option {
+    //         Some(user_id) => {
+
+    // }
 }
 
 impl Default for FungibleToken {
@@ -171,13 +183,15 @@ impl FungibleToken {
         let total_supply = total_supply.into();
         assert!(!env::state_exists(), "Already initialized");
         let mut ft = Self {
-            accounts: UnorderedMap::new(b"a".to_vec()),
+            accounts: UnorderedMap::new(b"31ec9a4c-af6f-44dd-a488-bfdc45c493a7".to_vec()),
             total_supply,
-            voter_id: 0,
-            voter_map: LookupMap::new(b"2a543bc7-a03f-427f-98c4-aa34012fa358".to_vec()),
+            user_id: 0,
+            user_map: LookupMap::new(b"2a543bc7-a03f-427f-98c4-aa34012fa358".to_vec()),
             voter_profile_map: LookupMap::new(b"a9d08e6d-fe16-441e-9330-81f45b8a68b3".to_vec()),
             voter_if_staked: LookupMap::new(b"0e9cdb00-e90a-4aed-8541-1fb2ea6a1538".to_vec()),
             voter_stakes: LookupMap::new(b"de89b05f-e35d-4237-bba9-64b2baac1ca8".to_vec()),
+            juror_stakes: LookupMap::new(b"bd08db59-eb71-489e-8cf8-a361a7e7fb39".to_vec()),
+            juror_applied_for: LookupMap::new(b"96a7bcb7-5c9e-4af5-b33c-eb7a4c3a38a1".to_vec()),
         };
         let mut account = ft.get_account(&owner_id);
         account.balance = total_supply;
