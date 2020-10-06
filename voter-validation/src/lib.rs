@@ -17,6 +17,10 @@ mod tests {
         "carol.near".to_string()
     }
 
+    fn user2() -> AccountId {
+        "user2.near".to_string()
+    }
+
     fn get_context(predecessor_account_id: AccountId) -> VMContext {
         VMContext {
             current_account_id: alice(), //The id of the account that owns the current contract.
@@ -367,5 +371,20 @@ mod tests {
         let stake = contract.get_voter_stake(voter_id);
         // println!(">>>>>{}<<<<<<<", stake);
         assert_eq!(stake, 50);
+
+        // Test for jury addition
+        context.signer_account_id = user2();
+        testing_env!(context.clone());
+        contract.create_voter_profile("user2profile".to_owned());
+        let voter_id = contract.get_user_id(user2());
+        // println!(">>>>>>{}<<<<<<<", voter_id);
+        assert_eq!(voter_id, 2);
+        let voter = contract.get_voter_details(2);
+        assert_eq!("user2profile".to_owned(), voter.profile_hash);
+
+        contract.apply_jurors(1, 51);
+        let all_data = contract.get_juror_stakes(2);
+        println!(">>>>>>>>{:?}<<<<<<<<<", all_data.get(&1));
+
     }
 }

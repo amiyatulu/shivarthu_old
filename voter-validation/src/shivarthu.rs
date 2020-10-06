@@ -44,9 +44,9 @@ pub struct FungibleToken {
     voter_profile_map: LookupMap<u128, Voter>, // <user_id, Voter>
     voter_if_staked: LookupMap<u128, bool>, // <user_id, true or false>
     voter_stakes: LookupMap<u128, u128>, // <user_id, stakes>
-    juror_stakes: LookupMap<u128, Vector<LookupMap<u128, u128>>>, //<juror user_id, <voter userid, stakes>>
+    juror_stakes: LookupMap<u128, LookupMap<u128, u128>>, //<juror user_id, <voter userid, stakes>>
     // juror_if_staked: LookupMap<u128, Vector<LookupMap<u128, u128>>>, // <juror user_id, <voter_user_id, true or false>>
-    juror_applied_for: LookupMap<u128, LookupSet<u128>>, //<juror user_id, voter user id set>    
+    juror_applied_for: LookupMap<u128, LookupSet<u128>>, //<juror user_id, voter user id set>
 }
 
 /// Voter Validation impl
@@ -117,15 +117,29 @@ impl FungibleToken {
         }
     }
 
-    // /// Apply Jurors with stake
-    
-    // pub fn apply_jurors(&mut self, user_id:u128, stake:u128) {
-    //     let account_id = env::signer_account_id();
-    //     let account_id_exists_option = self.user_map.get(&account_id);
-    //     match account_id_exists_option {
-    //         Some(user_id) => {
+    /// Apply Jurors with stake
 
-    // }
+    pub fn apply_jurors(&mut self, voter_user_id: u128, stake: u128) {
+        let account_id = env::signer_account_id();
+        let account_id_exists_option = self.user_map.get(&account_id);
+        match account_id_exists_option {
+            Some(my_user_id) => {
+                let stakeid = format!("juryid{}voterid{}", my_user_id, voter_user_id);
+                let sid = stakeid.to_string().into_bytes();
+                let mut stake_entry = LookupMap::new(sid);
+                stake_entry.insert(&voter_user_id, &stake);
+                self.juror_stakes.insert(&my_user_id, &stake_entry);
+            }
+            None => {
+                panic!("The account doesnot exists");
+            }
+        }
+    }
+
+    pub fn get_juror_stakes(&self, juror_user_id: u128) -> LookupMap<u128, u128> {
+        let data = self.juror_stakes.get(&juror_user_id);
+        data.unwrap()
+    }
 }
 
 impl Default for FungibleToken {
