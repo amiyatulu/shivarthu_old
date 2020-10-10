@@ -1,5 +1,5 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LookupMap, LookupSet, UnorderedMap, Vector};
+use near_sdk::collections::{LookupMap, LookupSet, UnorderedMap};
 use near_sdk::json_types::U128;
 use near_sdk::{env, near_bindgen, wee_alloc, AccountId, Balance, Promise, StorageUsage};
 
@@ -47,6 +47,7 @@ pub struct FungibleToken {
     juror_stakes: LookupMap<u128, LookupMap<u128, u128>>, //<juror user_id, <voter userid, stakes>>
     // juror_if_staked: LookupMap<u128, Vector<LookupMap<u128, u128>>>, // <juror user_id, <voter_user_id, true or false>>
     juror_applied_for: LookupMap<u128, LookupSet<u128>>, //<juror user_id, voter user id set>
+    juror_stake_unique_id: u128,
 }
 
 /// Voter Validation impl
@@ -54,8 +55,12 @@ pub struct FungibleToken {
 impl FungibleToken {
     pub fn get_user_id(&self, account_id: AccountId) -> u128 {
         let user_id_option = self.user_map.get(&account_id);
-        let user_id = user_id_option.unwrap();
-        user_id
+        match user_id_option {
+            Some(user_id) => user_id,
+            None => {
+                panic!("User id doesnot exist for AccountId");
+            }
+        }
     }
 
     pub fn get_voter_details(&self, user_id: u128) -> Voter {
@@ -112,23 +117,47 @@ impl FungibleToken {
                 }
             }
             None => {
-                panic!("Voter id doesnot exist");
+                panic!("User id doesnot exist");
             }
         }
     }
 
     /// Apply Jurors with stake
 
-    pub fn apply_jurors(&mut self, voter_user_id: u128, stake: u128) {
+    pub fn apply_jurors(&mut self, username: AccountId, stake: u128) {
         let account_id = env::signer_account_id();
         let account_id_exists_option = self.user_map.get(&account_id);
+        let voter_user_id = self.get_user_id(username);
         match account_id_exists_option {
             Some(my_user_id) => {
-                let stakeid = format!("juryid{}voterid{}", my_user_id, voter_user_id);
-                let sid = stakeid.to_string().into_bytes();
-                let mut stake_entry = LookupMap::new(sid);
-                stake_entry.insert(&voter_user_id, &stake);
-                self.juror_stakes.insert(&my_user_id, &stake_entry);
+                let juror_stakes_option = self.juror_stakes.get(&my_user_id);
+                match juror_stakes_option {
+                    Some(stake_entry) => {
+                        let stake_entry_option = stake_entry.get(&voter_user_id);
+                        match stake_entry_option {
+                            Some(stake) => {
+                                if stake > 0 {
+                                    panic!("You have already staked")
+                                } else {
+                                    self.add_juror_stake(
+                                        account_id,
+                                        my_user_id,
+                                        voter_user_id,
+                                        stake,
+                                    );
+                                    self.juror_stake_unique_id += 1;
+                                }
+                            }
+                            None => {
+                                println!(">>>>>>>>>>I am in None voter id<<<<<<<<<<<<<");
+                                self.add_juror_stake(account_id, my_user_id, voter_user_id, stake);
+                            }
+                        }
+                    }
+                    None => {
+                        self.add_juror_stake(account_id, my_user_id, voter_user_id, stake);
+                    }
+                }
             }
             None => {
                 panic!("The account doesnot exists");
@@ -136,6 +165,23 @@ impl FungibleToken {
         }
     }
 
+    fn add_juror_stake(
+        &mut self,
+        account_id: String,
+        my_user_id: u128,
+        voter_user_id: u128,
+        stake: u128,
+    ) {
+        let stakeid = format!(
+            "juryid{}voterid{}id{}",
+            my_user_id, voter_user_id, self.juror_stake_unique_id
+        );
+        let sid = stakeid.to_string().into_bytes();
+        let mut stake_entry = LookupMap::new(sid);
+        stake_entry.insert(&voter_user_id, &stake);
+        self.burn(&account_id, stake);
+        self.juror_stakes.insert(&my_user_id, &stake_entry);
+    }
     pub fn get_juror_stakes(&self, juror_user_id: u128) -> LookupMap<u128, u128> {
         let data = self.juror_stakes.get(&juror_user_id);
         data.unwrap()
@@ -206,6 +252,7 @@ impl FungibleToken {
             voter_stakes: LookupMap::new(b"de89b05f-e35d-4237-bba9-64b2baac1ca8".to_vec()),
             juror_stakes: LookupMap::new(b"bd08db59-eb71-489e-8cf8-a361a7e7fb39".to_vec()),
             juror_applied_for: LookupMap::new(b"96a7bcb7-5c9e-4af5-b33c-eb7a4c3a38a1".to_vec()),
+            juror_stake_unique_id: 0,
         };
         let mut account = ft.get_account(&owner_id);
         account.balance = total_supply;

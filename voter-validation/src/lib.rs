@@ -6,6 +6,7 @@ mod tests {
     use near_sdk::MockedBlockchain;
     use near_sdk::{env, AccountId, Balance};
     use near_sdk::{testing_env, VMContext};
+    use std::panic;
 
     fn alice() -> AccountId {
         "alice.near".to_string()
@@ -19,6 +20,10 @@ mod tests {
 
     fn user2() -> AccountId {
         "user2.near".to_string()
+    }
+
+    fn user3() -> AccountId {
+        "user3.near".to_string()
     }
 
     fn get_context(predecessor_account_id: AccountId) -> VMContext {
@@ -326,8 +331,7 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_voter_stake() {
+    fn voter_stake() -> FungibleToken {
         let mut context = get_context(carol());
         testing_env!(context.clone());
         let total_supply = 1_000_000_000_000_000u128;
@@ -374,6 +378,10 @@ mod tests {
 
         // Test for jury addition
         context.signer_account_id = user2();
+        context.attached_deposit = 1000 * STORAGE_PRICE_PER_BYTE;
+        testing_env!(context.clone());
+        contract.transfer(user2(), 60.into());
+        context.is_view = false;
         testing_env!(context.clone());
         contract.create_voter_profile("user2profile".to_owned());
         let voter_id = contract.get_user_id(user2());
@@ -382,9 +390,38 @@ mod tests {
         let voter = contract.get_voter_details(2);
         assert_eq!("user2profile".to_owned(), voter.profile_hash);
 
-        contract.apply_jurors(1, 51);
+        contract.apply_jurors(bob(), 51);
+        assert_eq!(contract.get_total_supply().0, intialtotalsupply - 50 - 51);
         let all_data = contract.get_juror_stakes(2);
-        println!(">>>>>>>>{:?}<<<<<<<<<", all_data.get(&1));
+        assert_eq!(Some(51), all_data.get(&1));
+        // println!(">>>>>>>>{:?}<<<<<<<<<", all_data.get(&1));
+
+        return contract;
+    }
+    #[test]
+    fn test_voter_stake() {
+        let _contract = voter_stake();
+    }
+
+    #[test]
+    #[should_panic(expected = "You have already staked")]
+    fn add_multiple_stake_per_voter() {
+        let mut contract = voter_stake();
+        contract.apply_jurors(bob(), 30);
+    }
+
+    #[test]
+    #[should_panic(expected = "User id doesnot exist for AccountId")]
+    fn apply_juror_but_user_doesnot_exist() {
+        let mut contract = voter_stake();
+        contract.apply_jurors(user3(), 50);
 
     }
+
+    // #[test]
+    // fn same_juror_different_voter() {
+    //     let mut contract = voter_stake();
+    //     contract.apply_jurors(3, 50);
+
+    // }
 }
