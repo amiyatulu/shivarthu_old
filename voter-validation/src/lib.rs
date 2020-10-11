@@ -331,7 +331,7 @@ mod tests {
         );
     }
 
-    fn voter_stake() -> FungibleToken {
+    fn voter_stake() -> (FungibleToken, VMContext) {
         let mut context = get_context(carol());
         testing_env!(context.clone());
         let total_supply = 1_000_000_000_000_000u128;
@@ -380,7 +380,7 @@ mod tests {
         context.signer_account_id = user2();
         context.attached_deposit = 1000 * STORAGE_PRICE_PER_BYTE;
         testing_env!(context.clone());
-        contract.transfer(user2(), 60.into());
+        contract.transfer(user2(), 150.into());
         context.is_view = false;
         testing_env!(context.clone());
         contract.create_voter_profile("user2profile".to_owned());
@@ -396,32 +396,41 @@ mod tests {
         assert_eq!(Some(51), all_data.get(&1));
         // println!(">>>>>>>>{:?}<<<<<<<<<", all_data.get(&1));
 
-        return contract;
+        return (contract, context);
     }
     #[test]
     fn test_voter_stake() {
-        let _contract = voter_stake();
+        let (_contract, _context) = voter_stake();
     }
 
     #[test]
     #[should_panic(expected = "You have already staked")]
     fn add_multiple_stake_per_voter() {
-        let mut contract = voter_stake();
+        let (mut contract, _context) = voter_stake();
         contract.apply_jurors(bob(), 30);
     }
 
     #[test]
     #[should_panic(expected = "User id doesnot exist for AccountId")]
     fn apply_juror_but_user_doesnot_exist() {
-        let mut contract = voter_stake();
+        let (mut contract, _context) = voter_stake();
         contract.apply_jurors(user3(), 50);
-
     }
 
-    // #[test]
-    // fn same_juror_different_voter() {
-    //     let mut contract = voter_stake();
-    //     contract.apply_jurors(3, 50);
-
-    // }
+    #[test]
+    fn same_juror_different_voter() {
+        let (mut contract, mut context) = voter_stake();
+        context.signer_account_id = user3();
+        testing_env!(context.clone());
+        contract.create_voter_profile("user3profile".to_owned());
+        let voter_id = contract.get_user_id(user3());
+        // println!(">>>>>>{}<<<<<<<", voter_id);
+        assert_eq!(voter_id, 3);
+        context.signer_account_id = user2();
+        testing_env!(context.clone());
+        let intialtotalsupply = contract.get_total_supply().0;
+        // println!("Initial Supply>>>>{}<<<<<<",intialtotalsupply);
+        contract.apply_jurors(user3(), 53);
+        assert_eq!(contract.get_total_supply().0, intialtotalsupply - 53);
+    }
 }
