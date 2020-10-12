@@ -1,10 +1,11 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LookupMap, LookupSet, UnorderedMap};
+use near_sdk::collections::{LookupMap, LookupSet, UnorderedMap, TreeMap, Vector};
 use near_sdk::json_types::U128;
 use near_sdk::{env, near_bindgen, wee_alloc, AccountId, Balance, Promise, StorageUsage};
 
-pub mod account;
-pub use self::account::Account;
+mod account;
+use self::account::Account;
+mod sortitionsum;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
@@ -29,6 +30,15 @@ pub struct Voter {
     pub kyc_done: bool,
 }
 
+#[derive(BorshDeserialize, BorshSerialize)]
+pub struct SortitionSumTree {
+    k: u128,
+    stack: Vector<u128>,
+    nodes: Vector<u128>,
+    ids_to_node_indexes: TreeMap<String, u128>,
+    node_indexes_to_ids: TreeMap<u128, String>,
+}
+
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct FungibleToken {
@@ -48,6 +58,11 @@ pub struct FungibleToken {
     // juror_if_staked: LookupMap<u128, Vector<LookupMap<u128, u128>>>, // <juror user_id, <voter_user_id, true or false>>
     juror_applied_for: LookupMap<u128, LookupSet<u128>>, //<juror user_id, voter user id set>
     juror_stake_unique_id: u128,
+
+    //sortition sum
+    // sortition_sum_tree_name_map: LookupMap<>
+    sortition_sum_trees: TreeMap<String, SortitionSumTree>,
+    uniquecount: u128,
 }
 
 /// Voter Validation impl
@@ -235,6 +250,8 @@ impl FungibleToken {
     }
 }
 
+
+
 #[near_bindgen]
 impl FungibleToken {
     /// Initializes the contract with the given total supply owned by the given `owner_id`.
@@ -253,6 +270,8 @@ impl FungibleToken {
             juror_stakes: LookupMap::new(b"bd08db59-eb71-489e-8cf8-a361a7e7fb39".to_vec()),
             juror_applied_for: LookupMap::new(b"96a7bcb7-5c9e-4af5-b33c-eb7a4c3a38a1".to_vec()),
             juror_stake_unique_id: 0,
+            sortition_sum_trees: TreeMap::new(b"68dbf390-0b13-4db1-bb7d-9bf6ac5d23ab".to_vec()),
+            uniquecount: 0,
         };
         let mut account = ft.get_account(&owner_id);
         account.balance = total_supply;
