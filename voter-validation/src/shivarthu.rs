@@ -1,10 +1,9 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LookupMap, LookupSet, UnorderedMap, TreeMap, Vector};
+use near_sdk::collections::{LookupMap, UnorderedMap, TreeMap, Vector};
 use near_sdk::{near_bindgen, wee_alloc, Balance};
 
 mod account;
 use self::account::Account;
-mod sortitionsum;
 mod token;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
@@ -54,14 +53,12 @@ pub struct FungibleToken {
     voter_profile_map: LookupMap<u128, Voter>, // <user_id, Voter>
     voter_if_staked: LookupMap<u128, bool>, // <user_id, true or false>
     voter_stakes: LookupMap<u128, u128>, // <user_id, stakes>
-    juror_stakes: LookupMap<u128, LookupMap<u128, u128>>, //<juror user_id, <voter userid, stakes>>
+    // juror_stakes: LookupMap<u128, LookupMap<u128, u128>>, //<juror user_id, <voter userid, stakes>>
     // juror_if_staked: LookupMap<u128, Vector<LookupMap<u128, u128>>>, // <juror user_id, <voter_user_id, true or false>>
-    juror_applied_for: LookupMap<u128, LookupSet<u128>>, //<juror user_id, voter user id set>
+    // juror_applied_for: LookupMap<u128, LookupSet<u128>>, //<juror user_id, voter user id set>
+    user_juror_stakes: LookupMap<u128, LookupMap<u128, u128>>, // <voter_user_id, <jurorid, stakes>>
+    user_juror_stakes_clone: LookupMap<u128, TreeMap<u128, u128>>,
     juror_stake_unique_id: u128,
 
-    //sortition sum
-    // sortition_sum_tree_name_map: LookupMap<>
-    sortition_sum_trees: TreeMap<String, SortitionSumTree>,
-    uniquecount: u128,
 }
 

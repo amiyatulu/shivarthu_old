@@ -1,6 +1,6 @@
 mod votervalidation;
 use super::{FungibleToken, STORAGE_PRICE_PER_BYTE};
-use near_sdk::collections::{LookupMap, UnorderedMap, TreeMap};
+use near_sdk::collections::{LookupMap, UnorderedMap};
 use near_sdk::json_types::U128;
 use near_sdk::{env, near_bindgen, AccountId, Balance, Promise, StorageUsage};
 use crate::shivarthu::account::Account;
@@ -20,11 +20,10 @@ impl FungibleToken {
             voter_profile_map: LookupMap::new(b"a9d08e6d-fe16-441e-9330-81f45b8a68b3".to_vec()),
             voter_if_staked: LookupMap::new(b"0e9cdb00-e90a-4aed-8541-1fb2ea6a1538".to_vec()),
             voter_stakes: LookupMap::new(b"de89b05f-e35d-4237-bba9-64b2baac1ca8".to_vec()),
-            juror_stakes: LookupMap::new(b"bd08db59-eb71-489e-8cf8-a361a7e7fb39".to_vec()),
-            juror_applied_for: LookupMap::new(b"96a7bcb7-5c9e-4af5-b33c-eb7a4c3a38a1".to_vec()),
-            juror_stake_unique_id: 0,
-            sortition_sum_trees: TreeMap::new(b"68dbf390-0b13-4db1-bb7d-9bf6ac5d23ab".to_vec()),
-            uniquecount: 0,
+            // juror_stakes: LookupMap::new(b"bd08db59-eb71-489e-8cf8-a361a7e7fb39".to_vec()),
+            user_juror_stakes: LookupMap::new(b"96a7bcb7-5c9e-4af5-b33c-eb7a4c3a38a1".to_vec()),
+            user_juror_stakes_clone: LookupMap::new(b"aaabae72-8319-42f0-9e8b-19d5db7d176d".to_vec()),
+            juror_stake_unique_id: 0
         };
         let mut account = ft.get_account(&owner_id);
         account.balance = total_supply;

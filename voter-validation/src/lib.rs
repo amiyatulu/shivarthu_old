@@ -322,7 +322,7 @@ mod tests {
         let mut contract = FungibleToken::new(carol(), total_supply.into());
         context.storage_usage = env::storage_usage();
         contract.create_voter_profile("c1d1a89574c6e744d982e0f2bf1154ef05c13".to_owned());
-        let voter_id = contract.get_user_id(bob());
+        let voter_id = contract.get_user_id(&bob());
         assert_eq!(voter_id, 1);
         let voter = contract.get_voter_details(1);
         assert_eq!(
@@ -338,7 +338,7 @@ mod tests {
         let mut contract = FungibleToken::new(carol(), total_supply.into());
         context.storage_usage = env::storage_usage();
         contract.create_voter_profile("c1d1a89574c6e744d982e0f2bf1154ef05c13".to_owned());
-        let voter_id = contract.get_user_id(bob());
+        let voter_id = contract.get_user_id(&bob());
         assert_eq!(voter_id, 1);
         let voter = contract.get_voter_details(1);
         assert_eq!(
@@ -384,16 +384,17 @@ mod tests {
         context.is_view = false;
         testing_env!(context.clone());
         contract.create_voter_profile("user2profile".to_owned());
-        let voter_id = contract.get_user_id(user2());
-        // println!(">>>>>>{}<<<<<<<", voter_id);
-        assert_eq!(voter_id, 2);
+        let juror_id = contract.get_user_id(&user2());
+        // println!(">>>>>>{}<<<<<<<", juror_id);
+        assert_eq!(juror_id, 2);
         let voter = contract.get_voter_details(2);
         assert_eq!("user2profile".to_owned(), voter.profile_hash);
 
         contract.apply_jurors(bob(), 51);
+        let voter_id = contract.get_user_id(&bob());
         assert_eq!(contract.get_total_supply().0, intialtotalsupply - 50 - 51);
-        let all_data = contract.get_juror_stakes(2);
-        assert_eq!(Some(51), all_data.get(&1));
+        let data = contract.get_juror_stakes(voter_id, juror_id);
+        assert_eq!(data, 51);
         // println!(">>>>>>>>{:?}<<<<<<<<<", all_data.get(&1));
 
         return (contract, context);
@@ -423,7 +424,7 @@ mod tests {
         context.signer_account_id = user3();
         testing_env!(context.clone());
         contract.create_voter_profile("user3profile".to_owned());
-        let voter_id = contract.get_user_id(user3());
+        let voter_id = contract.get_user_id(&user3());
         // println!(">>>>>>{}<<<<<<<", voter_id);
         assert_eq!(voter_id, 3);
         context.signer_account_id = user2();
@@ -432,5 +433,6 @@ mod tests {
         // println!("Initial Supply>>>>{}<<<<<<",intialtotalsupply);
         contract.apply_jurors(user3(), 53);
         assert_eq!(contract.get_total_supply().0, intialtotalsupply - 53);
+        
     }
 }
