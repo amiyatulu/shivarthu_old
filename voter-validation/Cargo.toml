@@ -9,3 +9,4 @@ edition = "2018"
 [dependencies]
 near-sdk = "2.0.0"
 wee_alloc = "0.4.5"
+rand = "0.7.3"

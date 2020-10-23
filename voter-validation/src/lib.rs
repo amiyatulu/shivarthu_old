@@ -433,6 +433,80 @@ mod tests {
         // println!("Initial Supply>>>>{}<<<<<<",intialtotalsupply);
         contract.apply_jurors(user3(), 53);
         assert_eq!(contract.get_total_supply().0, intialtotalsupply - 53);
-        
+    }
+
+    fn create_a_user(
+        username: AccountId,
+        profilehash: String,
+        mut contract: FungibleToken,
+        mut context: VMContext,
+    ) -> (FungibleToken, VMContext) {
+        context.signer_account_id = username.clone();
+        testing_env!(context.clone());
+        contract.create_voter_profile(profilehash);
+        context.attached_deposit = 1000 * STORAGE_PRICE_PER_BYTE;
+        testing_env!(context.clone());
+        contract.transfer(username, 150.into());
+        (contract, context)
+    }
+
+    fn apply_jurors_for_test_function(
+        voterusername: AccountId,
+        signerusername: AccountId,
+        stake: u128,
+        mut contract: FungibleToken,
+        mut context: VMContext,
+    ) -> FungibleToken {
+        context.signer_account_id = signerusername;
+        testing_env!(context.clone());
+        contract.apply_jurors(voterusername, stake);
+        contract
+    }
+
+    #[test]
+    fn draw_juror() {
+        let (mut contract, mut context) = voter_stake();
+        // contract.draw_jurors(bob());
+
+        // Add 5 jurors for bob()
+
+        // Create 5 juror
+        let (contract, context) = create_a_user(
+            "juror1".to_owned(),
+            "juror1######XXXXX".to_owned(),
+            contract,
+            context,
+        );
+        let (contract, context) = create_a_user(
+            "juror2".to_owned(),
+            "juror2######XXXXX".to_owned(),
+            contract,
+            context,
+        );
+        let (contract, context) = create_a_user(
+            "juror3".to_owned(),
+            "juror3######XXXXX".to_owned(),
+            contract,
+            context,
+        );
+        let (contract, context) = create_a_user(
+            "juror4".to_owned(),
+            "juror4######XXXXX".to_owned(),
+            contract,
+            context,
+        );
+        let (contract, context) = create_a_user(
+            "juror5".to_owned(),
+            "juror5######XXXXX".to_owned(),
+            contract,
+            context,
+        );
+        let contract = apply_jurors_for_test_function(bob(), "juror1".to_owned(),  60, contract, context.clone());
+        let contract = apply_jurors_for_test_function(bob(), "juror2".to_owned(),  40, contract, context.clone());
+        let contract = apply_jurors_for_test_function(bob(), "juror3".to_owned(),  30, contract, context.clone());
+        let contract = apply_jurors_for_test_function(bob(), "juror4".to_owned(),  20, contract, context.clone());
+        let mut contract = apply_jurors_for_test_function(bob(), "juror5".to_owned(),  20, contract, context.clone());
+        contract.draw_jurors(bob());
+
     }
 }

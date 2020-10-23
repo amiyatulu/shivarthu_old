@@ -1,6 +1,8 @@
 use super::super::{FungibleToken, Voter};
-use near_sdk::collections::LookupMap;
+use near_sdk::collections::{LookupMap, TreeMap};
 use near_sdk::{env, near_bindgen, AccountId};
+use rand::distributions::WeightedIndex;
+use rand::prelude::*;
 
 /// Voter Validation impl
 #[near_bindgen]
@@ -80,6 +82,25 @@ impl FungibleToken {
         let account_id = env::signer_account_id();
         let singer_juror_user = self.get_user_id(&account_id);
         let voter_user_id = self.get_user_id(&voter_username);
+        self.user_juror_stakes_store(
+            account_id.clone(),
+            singer_juror_user.clone(),
+            voter_user_id.clone(),
+            stake.clone(),
+        );
+        self.user_juror_stakes_clone_store(
+            singer_juror_user.clone(),
+            voter_user_id.clone(),
+            stake.clone(),
+        );
+    }
+    fn user_juror_stakes_store(
+        &mut self,
+        account_id: String,
+        singer_juror_user: u128,
+        voter_user_id: u128,
+        stake: u128,
+    ) {
         let user_juror_stakes_option = self.user_juror_stakes.get(&voter_user_id);
         match user_juror_stakes_option {
             Some(mut stake_entries) => {
@@ -118,6 +139,69 @@ impl FungibleToken {
         }
     }
 
+    fn user_juror_stakes_clone_store(
+        &mut self,
+        singer_juror_user: u128,
+        voter_user_id: u128,
+        stake: u128,
+    ) {
+        let user_juror_stakes_option = self.user_juror_stakes_clone.get(&voter_user_id);
+        match user_juror_stakes_option {
+            Some(mut stake_entries) => {
+                let stake_entries_option = stake_entries.get(&singer_juror_user);
+                match stake_entries_option {
+                    Some(stake) => {
+                        if stake > 0 {
+                            panic!("You have already staked")
+                        } else {
+                            stake_entries.insert(&singer_juror_user, &stake);
+                            self.user_juror_stakes_clone
+                                .insert(&voter_user_id, &stake_entries);
+                        }
+                    }
+                    None => {
+                        stake_entries.insert(&singer_juror_user, &stake);
+                        self.user_juror_stakes_clone
+                            .insert(&voter_user_id, &stake_entries);
+                    }
+                }
+            }
+            None => {
+                let stakeidstring = format!(
+                    "stakevoteridclone{}uniqueid{}",
+                    voter_user_id, self.juror_stake_unique_id
+                );
+                let stakeid = stakeidstring.to_string().into_bytes();
+                let mut stake_entries = TreeMap::new(stakeid);
+                stake_entries.insert(&singer_juror_user, &stake);
+                self.user_juror_stakes_clone
+                    .insert(&voter_user_id, &stake_entries);
+            }
+        }
+    }
+
+    pub fn draw_jurors(&mut self, voter_username: AccountId) {
+        let voter_user_id = self.get_user_id(&voter_username);
+        let user_juror_stakes_clone_option = self.user_juror_stakes_clone.get(&voter_user_id);
+        match user_juror_stakes_clone_option {
+            Some(juries_stakes) => {
+                let items = juries_stakes.to_vec();
+                println!(">>>>>>>>Juries{:?}<<<<<<<<<<<", items);
+                let mut rng = thread_rng(); // change it to getting from seed
+                let mut dist2 = WeightedIndex::new(items.iter().map(|item| item.1)).unwrap();
+                for _ in 0..6 {
+                    let index = dist2.sample(&mut rng);
+                    // println!("{}", index);
+                    println!("{:?}", items[index].0);
+            
+                    let _d = dist2.update_weights(&[(index, &0)]);
+                }
+            }
+            None => {
+                panic!("There are no juries");
+            }
+        }
+    }
 
     pub fn get_juror_stakes(&self, voter_user_id: u128, juror_user_id: u128) -> u128 {
         let juror_list_option = self.user_juror_stakes.get(&voter_user_id);
