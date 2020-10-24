@@ -3,7 +3,19 @@ use near_sdk::collections::{LookupMap, TreeMap};
 use near_sdk::{env, near_bindgen, AccountId};
 use rand::distributions::WeightedIndex;
 use rand::prelude::*;
+use rand::{rngs::StdRng, SeedableRng};
 
+pub fn get_rng(seed_vec: Vec<u8>) -> StdRng {
+    let mut seed = [0u8; 32];
+    let mut counter = 0;
+    for v in seed_vec.iter() {
+        seed[counter] = *v;
+        counter += 1;
+    }
+
+    let rng: StdRng = SeedableRng::from_seed(seed);
+    rng
+}
 /// Voter Validation impl
 #[near_bindgen]
 impl FungibleToken {
@@ -187,13 +199,13 @@ impl FungibleToken {
             Some(juries_stakes) => {
                 let items = juries_stakes.to_vec();
                 println!(">>>>>>>>Juries{:?}<<<<<<<<<<<", items);
-                let mut rng = thread_rng(); // change it to getting from seed
+                let random_vec = env::random_seed();
+                let mut rng = get_rng(random_vec);
                 let mut dist2 = WeightedIndex::new(items.iter().map(|item| item.1)).unwrap();
                 for _ in 0..6 {
                     let index = dist2.sample(&mut rng);
                     // println!("{}", index);
                     println!("{:?}", items[index].0);
-            
                     let _d = dist2.update_weights(&[(index, &0)]);
                 }
             }

@@ -7,6 +7,24 @@ mod tests {
     use near_sdk::{env, AccountId, Balance};
     use near_sdk::{testing_env, VMContext};
     use std::panic;
+    use rand::Rng;
+
+    fn rand_vector() -> Vec<u8> {
+        let mut rng = rand::thread_rng();
+
+        let mut randvec: Vec<u8> = Vec::new();
+        let mut counter = 0;
+        let result = loop {
+            counter += 1;
+            let n1: u8 = rng.gen();
+            randvec.push(n1);
+
+            if counter == 32 {
+                break randvec;
+            }
+        };
+        return result;
+    }
 
     fn alice() -> AccountId {
         "alice.near".to_string()
@@ -456,16 +474,16 @@ mod tests {
         stake: u128,
         mut contract: FungibleToken,
         mut context: VMContext,
-    ) -> FungibleToken {
+    ) -> (FungibleToken, VMContext) {
         context.signer_account_id = signerusername;
         testing_env!(context.clone());
         contract.apply_jurors(voterusername, stake);
-        contract
+        (contract, context)
     }
 
     #[test]
     fn draw_juror() {
-        let (mut contract, mut context) = voter_stake();
+        let (contract, context) = voter_stake();
         // contract.draw_jurors(bob());
 
         // Add 5 jurors for bob()
@@ -501,11 +519,13 @@ mod tests {
             contract,
             context,
         );
-        let contract = apply_jurors_for_test_function(bob(), "juror1".to_owned(),  60, contract, context.clone());
-        let contract = apply_jurors_for_test_function(bob(), "juror2".to_owned(),  40, contract, context.clone());
-        let contract = apply_jurors_for_test_function(bob(), "juror3".to_owned(),  30, contract, context.clone());
-        let contract = apply_jurors_for_test_function(bob(), "juror4".to_owned(),  20, contract, context.clone());
-        let mut contract = apply_jurors_for_test_function(bob(), "juror5".to_owned(),  20, contract, context.clone());
+        let (contract, context) = apply_jurors_for_test_function(bob(), "juror1".to_owned(),  60, contract, context.clone());
+        let (contract, context) = apply_jurors_for_test_function(bob(), "juror2".to_owned(),  40, contract, context.clone());
+        let (contract, context) = apply_jurors_for_test_function(bob(), "juror3".to_owned(),  30, contract, context.clone());
+        let (contract, context) = apply_jurors_for_test_function(bob(), "juror4".to_owned(),  20, contract, context.clone());
+        let (mut contract, mut context) = apply_jurors_for_test_function(bob(), "juror5".to_owned(),  20, contract, context.clone());
+        context.random_seed = rand_vector();
+        testing_env!(context.clone());
         contract.draw_jurors(bob());
 
     }
