@@ -6,8 +6,8 @@ mod tests {
     use near_sdk::MockedBlockchain;
     use near_sdk::{env, AccountId, Balance};
     use near_sdk::{testing_env, VMContext};
-    use std::panic;
     use rand::Rng;
+    use std::panic;
 
     fn rand_vector() -> Vec<u8> {
         let mut rng = rand::thread_rng();
@@ -519,14 +519,60 @@ mod tests {
             contract,
             context,
         );
-        let (contract, context) = apply_jurors_for_test_function(bob(), "juror1".to_owned(),  60, contract, context.clone());
-        let (contract, context) = apply_jurors_for_test_function(bob(), "juror2".to_owned(),  40, contract, context.clone());
-        let (contract, context) = apply_jurors_for_test_function(bob(), "juror3".to_owned(),  30, contract, context.clone());
-        let (contract, context) = apply_jurors_for_test_function(bob(), "juror4".to_owned(),  20, contract, context.clone());
-        let (mut contract, mut context) = apply_jurors_for_test_function(bob(), "juror5".to_owned(),  20, contract, context.clone());
+        let (contract, context) = apply_jurors_for_test_function(
+            bob(),
+            "juror1".to_owned(),
+            60,
+            contract,
+            context.clone(),
+        );
+        let (contract, context) = apply_jurors_for_test_function(
+            bob(),
+            "juror2".to_owned(),
+            40,
+            contract,
+            context.clone(),
+        );
+        let (contract, context) = apply_jurors_for_test_function(
+            bob(),
+            "juror3".to_owned(),
+            30,
+            contract,
+            context.clone(),
+        );
+        let (contract, context) = apply_jurors_for_test_function(
+            bob(),
+            "juror4".to_owned(),
+            20,
+            contract,
+            context.clone(),
+        );
+        let (mut contract, mut context) = apply_jurors_for_test_function(
+            bob(),
+            "juror5".to_owned(),
+            20,
+            contract,
+            context.clone(),
+        );
         context.random_seed = rand_vector();
         testing_env!(context.clone());
         contract.draw_jurors(bob());
+        let bob_id = contract.get_user_id(&bob());
+        let jurylist = contract.get_selected_jurors(bob_id);
+        let four = jurylist.contains(&4);
+        println!("{:?}", four);
+        let two = jurylist.contains(&2);
+        println!("{:?}", two);
+        let three = jurylist.contains(&3);
+        println!("{:?}", three);
+        let seven = jurylist.contains(&7);
+        println!("{:?}", seven);
+        let five = jurylist.contains(&5);
+        println!("{:?}", five);
+        let six = jurylist.contains(&6);
+        println!("{:?}", six);
+        let ten = jurylist.contains(&10);
+        println!("{:?}", ten);
 
     }
 }

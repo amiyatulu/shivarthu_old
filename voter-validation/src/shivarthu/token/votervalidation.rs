@@ -1,5 +1,5 @@
 use super::super::{FungibleToken, Voter};
-use near_sdk::collections::{LookupMap, TreeMap};
+use near_sdk::collections::{LookupMap, LookupSet, TreeMap};
 use near_sdk::{env, near_bindgen, AccountId};
 use rand::distributions::WeightedIndex;
 use rand::prelude::*;
@@ -183,6 +183,7 @@ impl FungibleToken {
                     "stakevoteridclone{}uniqueid{}",
                     voter_user_id, self.juror_stake_unique_id
                 );
+                self.juror_stake_unique_id += 1;
                 let stakeid = stakeidstring.to_string().into_bytes();
                 let mut stake_entries = TreeMap::new(stakeid);
                 stake_entries.insert(&singer_juror_user, &stake);
@@ -194,20 +195,45 @@ impl FungibleToken {
 
     pub fn draw_jurors(&mut self, voter_username: AccountId) {
         let voter_user_id = self.get_user_id(&voter_username);
+        let selected_juror_option = self.selected_juror.get(&voter_user_id);
+        match selected_juror_option {
+            Some(jurysetentries) => {
+                self.draw_jurors_function(voter_user_id, jurysetentries);
+            }
+            None => {
+                let jurysetidstring = format!("jurysetid{}", voter_username);
+                let jurysetid = jurysetidstring.to_string().into_bytes();
+                let jurysetentries = LookupSet::new(jurysetid);
+                self.draw_jurors_function(voter_user_id, jurysetentries);
+            }
+        }
+    }
+    fn draw_jurors_function(&mut self, voter_user_id: u128, mut jurysetentries: LookupSet<u128>) {
         let user_juror_stakes_clone_option = self.user_juror_stakes_clone.get(&voter_user_id);
         match user_juror_stakes_clone_option {
-            Some(juries_stakes) => {
+            Some(mut juries_stakes) => {
                 let items = juries_stakes.to_vec();
                 println!(">>>>>>>>Juries{:?}<<<<<<<<<<<", items);
                 let random_vec = env::random_seed();
                 let mut rng = get_rng(random_vec);
                 let mut dist2 = WeightedIndex::new(items.iter().map(|item| item.1)).unwrap();
-                for _ in 0..6 {
+                let mut length = items.len();
+                if length > 20 {
+                    length = 20;
+                }
+
+                for _ in 0..length {
                     let index = dist2.sample(&mut rng);
                     // println!("{}", index);
-                    println!("{:?}", items[index].0);
+                    let drawindex = items[index].0;
+                    println!("{:?}", drawindex);
+                    juries_stakes.remove(&drawindex);
+                    jurysetentries.insert(&drawindex);
                     let _d = dist2.update_weights(&[(index, &0)]);
                 }
+                self.user_juror_stakes_clone
+                    .insert(&voter_user_id, &juries_stakes);
+                self.selected_juror.insert(&voter_user_id, &jurysetentries);
             }
             None => {
                 panic!("There are no juries");
@@ -215,6 +241,15 @@ impl FungibleToken {
         }
     }
 
+    pub fn get_selected_jurors(&self, voter_user_id: u128) -> LookupSet<u128> {
+        let selected_juror_option = self.selected_juror.get(&voter_user_id);
+        match selected_juror_option {
+            Some(jurysetentries) => jurysetentries,
+            None => {
+                panic!("No selected juroros");
+            }
+        }
+    }
     pub fn get_juror_stakes(&self, voter_user_id: u128, juror_user_id: u128) -> u128 {
         let juror_list_option = self.user_juror_stakes.get(&voter_user_id);
         match juror_list_option {

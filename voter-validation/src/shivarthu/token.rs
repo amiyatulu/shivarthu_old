@@ -23,7 +23,8 @@ impl FungibleToken {
             // juror_stakes: LookupMap::new(b"bd08db59-eb71-489e-8cf8-a361a7e7fb39".to_vec()),
             user_juror_stakes: LookupMap::new(b"96a7bcb7-5c9e-4af5-b33c-eb7a4c3a38a1".to_vec()),
             user_juror_stakes_clone: LookupMap::new(b"aaabae72-8319-42f0-9e8b-19d5db7d176d".to_vec()),
-            juror_stake_unique_id: 0
+            juror_stake_unique_id: 0,
+            selected_juror: LookupMap::new(b"827a829e-e9b9-4e85-908b-49f8dab0e496".to_vec()),
         };
         let mut account = ft.get_account(&owner_id);
         account.balance = total_supply;

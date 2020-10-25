@@ -1,5 +1,5 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LookupMap, UnorderedMap, TreeMap, Vector};
+use near_sdk::collections::{LookupMap, UnorderedMap, TreeMap, Vector, LookupSet};
 use near_sdk::{near_bindgen, wee_alloc, Balance};
 
 mod account;
@@ -59,6 +59,6 @@ pub struct FungibleToken {
     user_juror_stakes: LookupMap<u128, LookupMap<u128, u128>>, // <voter_user_id, <jurorid, stakes>>
     user_juror_stakes_clone: LookupMap<u128, TreeMap<u128, u128>>,
     juror_stake_unique_id: u128,
-
+    selected_juror: LookupMap<u128, LookupSet<u128>> // <voter_user_id, jurorid>
 }
 
